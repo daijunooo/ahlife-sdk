@@ -6,8 +6,8 @@ namespace Ahlife;
 use Ahlife\Providers\OCenter;
 
 /**
- * @method OCenter OCenter
- * @method \Ahlife\Contracts\Cache Cache
+ * @method OCenter ocenter
+ * @method \Ahlife\Contracts\Tool tools
  */
 class App implements \Ahlife\Contracts\App
 {
@@ -19,7 +19,7 @@ class App implements \Ahlife\Contracts\App
     protected $config = [];
 
     protected $providers = [
-        'OCenter' => OCenter::class
+        'ocenter' => OCenter::class
     ];
 
     public static $instances = [];
@@ -32,20 +32,26 @@ class App implements \Ahlife\Contracts\App
         $this->boot();
     }
 
+    /**
+     * 加载配置文件中定义的boots服务
+     */
     public function boot()
     {
-        if (!$boots = $this->config['Boots']) return;
+        if (!$boots = $this->config['boots']) return;
 
-        foreach ($boots as $name => $provider) {
-            $this->hasInstance($name) || $this->setInstance($name, $provider);
-        }
+        $this->providers = array_merge($this->providers, $this->config['boots']);
     }
+
 
     public function __call($name, $arguments)
     {
         if (!$this->hasInstance($name)) {
-            $this->setInstance($name, $arguments);
+
+            $app = $this->setInstance($name, $arguments);
+
+            method_exists($app, 'boot') && $app->boot($this);
         }
+
         return $this->getInstance($name);
     }
 
@@ -76,17 +82,18 @@ class App implements \Ahlife\Contracts\App
         return static::$instances[$key];
     }
 
-    /**
-     * @param $key string
-     */
-    public function setInstance($key, $arguments)
+
+    public function setInstance($key, $arguments = null)
     {
         if (array_key_exists($key, $this->providers)) {
-            $app = static::$instances[$key] = new $this->providers[$key](...$arguments);
+
+            static::$instances[$key] = new $this->providers[$key](...$arguments);
+
         } else {
-            $app = static::$instances[$key] = $arguments::app();
+
+            die('sdk中没有找到' . $key . '方法');
+
         }
-        method_exists($app, 'boot') && $app->boot($this);
     }
 
     /**
@@ -96,21 +103,24 @@ class App implements \Ahlife\Contracts\App
     public function getConfig($key = '')
     {
         $config = $this->config;
+
         if (strpos($key, '.') === false) {
+
             return isset($config[$key]) ? $config[$key] : $config;
+
         } else {
+
             $keys = explode('.', $key);
+
             while ($key = array_shift($keys)) {
                 $config = $config[$key];
             }
+
             return $config;
         }
     }
 
-    /**
-     * @param array $config
-     * @return array
-     */
+
     public function setConfig($config = [])
     {
         return $this->config = $config;

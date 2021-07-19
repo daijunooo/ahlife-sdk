@@ -4,30 +4,44 @@ namespace Ahlife\Providers;
 
 
 use Ahlife\App;
+use Ahlife\Contracts\Tool;
 use Ahlife\Contracts\Sdk;
+use Ahlife\Exceptions\Error;
 
 class OCenter extends Sdk
 {
+    /**
+     * @var Tool
+     */
+    protected $tools;
+
+    /**
+     * @var Http
+     */
+    protected $http;
+
     protected $server_uri;
     protected $session_key;
     protected $ts_salt;
-    protected $app;
+    protected $wechat;
 
     /**
      * OCenter constructor.
-     * @param $app string 授权应用，目前可用应用ahlife、we5、test
+     * @param $wechat string 授权应用，目前可用应用ahlife、we5、test
      */
-    public function __construct($app)
+    public function __construct($wechat)
     {
-        $this->app = $app;
+        $this->wechat = $wechat;
+        $this->http   = new Http();
     }
 
     public function boot(App $app)
     {
+        $this->tools       = $app->tools();
         $this->server_uri  = $app->getConfig('OCenter.server_uri');
         $this->session_key = $app->getConfig('OCenter.session_key');
         $this->ts_salt     = $app->getConfig('OCenter.ts_salt');
-        $this->app         = $app->getConfig('OCenter.app');
+        $this->wechat      = $app->getConfig('OCenter.app');
     }
 
     /**
@@ -38,6 +52,7 @@ class OCenter extends Sdk
         $url       = $url ?: self::current();
         $timestamp = time();
         $nonce     = uniqid('rand_');
+
         list($ticket, $appid) = $this->jsApiTicket();
 
         $config = [
@@ -60,15 +75,18 @@ class OCenter extends Sdk
      */
     public function jsApiTicket()
     {
-        $c_key  = 'JSAPI_TICKET_' . $this->app;
-        $ticket = cache($c_key);
+        $c_key  = 'JSAPI_TICKET_' . $this->wechat;
+        $ticket = $this->tools->cache($c_key);
+
         if (!$ticket) {
-            $http     = new Http();
-            $response = $http->get($this->server_uri, ['s' => 'oauth/token/jsapi_ticket', 'app' => $this->app]);
-            if ($response['status'] == '200'
-                && $responseBody = json_decode($response['data'], true)) {
-                $ticket = [$responseBody['ticket'], $responseBody['appId']];
-                cache($c_key, $ticket, $responseBody['expire_in']);
+            $res = $this->http->get($this->server_uri, [
+                's'   => 'oauth/token/jsapi_ticket',
+                'app' => $this->wechat
+            ]);
+
+            if ($res['status'] == '200' && $data = json_decode($res['data'], true)) {
+                $ticket = [$data['ticket'], $data['appId']];
+                $this->tools->cache($c_key, $ticket, $data['expire_in']);
             }
         }
 
@@ -78,15 +96,18 @@ class OCenter extends Sdk
 
     public function accessToken()
     {
-        $c_key  = 'ACCESS_TOKEN_' . $this->app;
-        $ticket = cache($c_key);
+        $c_key  = 'ACCESS_TOKEN_' . $this->wechat;
+        $ticket = $this->tools->cache($c_key);
+
         if (!$ticket) {
-            $http     = new Http();
-            $response = $http->get($this->server_uri, ['s' => 'oauth/token/access_token', 'app' => $this->app]);
-            if ($response['status'] == '200'
-                && $responseBody = json_decode($response['data'], true)) {
-                $ticket = $responseBody['token'];
-                cache($c_key, $ticket, $responseBody['expire_in']);
+            $res = $this->http->get($this->server_uri, [
+                's'   => 'oauth/token/access_token',
+                'app' => $this->wechat
+            ]);
+
+            if ($res['status'] == '200' && $data = json_decode($res['data'], true)) {
+                $ticket = $data['token'];
+                $this->tools->cache($c_key, $ticket, $data['expire_in']);
             }
         }
 
@@ -101,36 +122,36 @@ class OCenter extends Sdk
     {
         $scope  = $detail ? 'snsapi_userinfo' : 'snsapi_base';
         $key    = $this->session_key . $scope;
-        $openid = request()->input('openid');
+        $openid = $_REQUEST['openid'];
 
-        if ($user = session($key)) {
+        if ($user = $this->tools->session($key)) {
             return $user;
         }
 
         if ($openid && $openid = $this->think_decrypt($openid, $this->ts_salt)) {
-            session([$key => ['openid' => $openid]]);
+            $this->tools->session([$key => ['openid' => $openid]]);
             if ($detail) {
-                $res  = (new Http)->get($this->server_uri . '?s=/oauth/index/info&openid=' . $openid);
+                $res  = $this->http->get($this->server_uri . '?s=/oauth/index/info&openid=' . $openid);
                 $data = json_decode($res['data'], true);
                 if ($data['status'] && $data['info']['auth'] = true) {
                     return $data['info'];
                 } else {
-                    abort(Error::WECHATAUTH, $data['info']);
+                    throw new Error($data['info'], Error::WECHATAUTH);
                 }
             }
         } else {
             $query = [
                 'redirect' => $redirect ? $redirect : self::current(),
                 'scope'    => $scope,
-                'app'      => $this->app,
+                'app'      => $this->wechat,
                 'salt'     => $this->ts_salt
             ];
 
             if (request()->ajax()) {
-                abort(Error::NOAUTH, '请授权登录');
+                throw new Error(Error::NOAUTH, '请授权登录');
             }
 
-            abort(302, $this->server_uri . '?s=/oauth&' . http_build_query($query));
+            throw new Error($this->server_uri . '?s=/oauth&' . http_build_query($query), Error::DIRECT);
         }
 
     }

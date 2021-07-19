@@ -3,7 +3,7 @@
 namespace Ahlife;
 
 
-class Cache implements \Ahlife\Contracts\Cache
+class Tool implements \Ahlife\Contracts\Tool
 {
     public static function app()
     {
@@ -18,5 +18,15 @@ class Cache implements \Ahlife\Contracts\Cache
             return cache($key);
         }
     }
+
+    public function session($key, $value = null)
+    {
+        if ($value === null) {
+            return session($key);
+        } else {
+            return $this->session([$key => $value]);
+        }
+    }
+
 
 }
