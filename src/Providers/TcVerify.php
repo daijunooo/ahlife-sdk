@@ -3,12 +3,13 @@
 namespace Ahlife\Providers;
 
 use Ahlife\App;
+use Ahlife\Contracts\Sdk;
 use Ahlife\Exceptions\Error;
 
 /**
  * 腾讯人机验证
  */
-class TcVerify
+class TcVerify extends Sdk
 {
     protected $appid;
     protected $secret;
