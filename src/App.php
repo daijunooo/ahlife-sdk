@@ -3,10 +3,14 @@
 namespace Ahlife;
 
 
+use Ahlife\Providers\Http;
 use Ahlife\Providers\OCenter;
+use Ahlife\Providers\TcVerify;
 
 /**
  * @method OCenter ocenter
+ * @method Http http
+ * @method TcVerify tcverify
  * @method \Ahlife\Contracts\Tool tools
  */
 class App implements \Ahlife\Contracts\App
@@ -19,7 +23,9 @@ class App implements \Ahlife\Contracts\App
     protected $config = [];
 
     protected $providers = [
-        'ocenter' => OCenter::class
+        'ocenter'  => OCenter::class,
+        'http'     => Http::class,
+        'tcverify' => TcVerify::class,
     ];
 
     public static $instances = [];
@@ -86,13 +92,9 @@ class App implements \Ahlife\Contracts\App
     public function setInstance($key, $arguments = null)
     {
         if (array_key_exists($key, $this->providers)) {
-
-            static::$instances[$key] = new $this->providers[$key](...$arguments);
-
+            return static::$instances[$key] = new $this->providers[$key](...$arguments);
         } else {
-
             die('sdk中没有找到' . $key . '方法');
-
         }
     }
 
@@ -105,11 +107,8 @@ class App implements \Ahlife\Contracts\App
         $config = $this->config;
 
         if (strpos($key, '.') === false) {
-
             return isset($config[$key]) ? $config[$key] : $config;
-
         } else {
-
             $keys = explode('.', $key);
 
             while ($key = array_shift($keys)) {
