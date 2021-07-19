@@ -2,45 +2,118 @@
 
 namespace Ahlife;
 
-class App
+
+use Ahlife\Providers\OCenter;
+
+/**
+ * @method OCenter OCenter
+ * @method \Ahlife\Contracts\Cache Cache
+ */
+class App implements \Ahlife\Contracts\App
 {
     /**
-     * @var Ahlife
+     * @var App
      */
-    protected $app;
+    protected $app = null;
 
-    /**
-     * 服务实例容器
-     */
-    public static $instance;
+    protected $config = [];
 
-    /**
-     * 可用服务列表
-     */
-    public static $services = [
-        'timer' => Timer::class,
-        'auth'  => Auth::class,
+    protected $providers = [
+        'OCenter' => OCenter::class
     ];
 
-    public static $config = [
-        'jwt'   => [
-            'secret' => 'xxxxxxx',
-            'client' => 'xxxxxxx',
-            'exp'    => 3600
-        ],
-        'timer' => [
-            'url' => 'http://localhost:8000/baidu'
-        ]
-    ];
+    public static $instances = [];
 
-    public function __construct(App $app)
+
+    public function __construct($config = [])
     {
-        $this->app = $app;
-        method_exists($this, 'boot') && $this->boot();
+        $this->config = $config;
+        $this->app    = $this;
+        $this->boot();
     }
 
-    public static function setConfig(array $config)
+    public function boot()
     {
-        self::$config = array_merge(self::$config, $config);
+        if (!$boots = $this->config['Boots']) return;
+
+        foreach ($boots as $name => $provider) {
+            $this->hasInstance($name) || $this->setInstance($name, $provider);
+        }
     }
+
+    public function __call($name, $arguments)
+    {
+        if (!$this->hasInstance($name)) {
+            $this->setInstance($name, $arguments);
+        }
+        return $this->getInstance($name);
+    }
+
+
+    /**
+     * @return App
+     */
+    public static function app($config = [])
+    {
+        return new static($config);
+    }
+
+    /**
+     * @param $key string
+     * @return bool
+     */
+    public function hasInstance($key)
+    {
+        return isset(static::$instances[$key]);
+    }
+
+    /**
+     * @param $key
+     * @return mixed
+     */
+    public function getInstance($key)
+    {
+        return static::$instances[$key];
+    }
+
+    /**
+     * @param $key string
+     */
+    public function setInstance($key, $arguments)
+    {
+        if (array_key_exists($key, $this->providers)) {
+            $app = static::$instances[$key] = new $this->providers[$key](...$arguments);
+        } else {
+            $app = static::$instances[$key] = $arguments::app();
+        }
+        method_exists($app, 'boot') && $app->boot($this);
+    }
+
+    /**
+     * @param string $key
+     * @return array
+     */
+    public function getConfig($key = '')
+    {
+        $config = $this->config;
+        if (strpos($key, '.') === false) {
+            return isset($config[$key]) ? $config[$key] : $config;
+        } else {
+            $keys = explode('.', $key);
+            while ($key = array_shift($keys)) {
+                $config = $config[$key];
+            }
+            return $config;
+        }
+    }
+
+    /**
+     * @param array $config
+     * @return array
+     */
+    public function setConfig($config = [])
+    {
+        return $this->config = $config;
+    }
+
 }
