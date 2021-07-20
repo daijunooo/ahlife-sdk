@@ -38,10 +38,10 @@ class OCenter extends Sdk
     {
         $this->tools       = $app->tools();
         $this->http        = $app->http();
-        $this->server_uri  = $app->getConfig('OCenter.server_uri');
-        $this->session_key = $app->getConfig('OCenter.session_key');
-        $this->ts_salt     = $app->getConfig('OCenter.ts_salt');
-        $this->wechat      = $app->getConfig('OCenter.app');
+        $this->server_uri  = $app->getConfig('ocenter.server_uri');
+        $this->session_key = $app->getConfig('ocenter.session_key');
+        $this->ts_salt     = $app->getConfig('ocenter.ts_salt');
+        $this->wechat      = $app->getConfig('ocenter.app');
     }
 
     /**
