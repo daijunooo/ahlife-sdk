@@ -36,7 +36,7 @@ class TcVerify extends Sdk
             "AppSecretKey" => $this->secret,
             "Ticket"       => $_REQUEST['ticket'],
             "Randstr"      => $_REQUEST['randstr'],
-            "UserIP"       => $_SERVER['addr_ip']
+            "UserIP"       => $_SERVER['SERVER_ADDR']
         ]);
 
         $result = json_decode($response['data']);
