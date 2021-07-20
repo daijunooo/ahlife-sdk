@@ -10,7 +10,6 @@ return [
         'server_uri'  => 'xxxxx',
         'session_key' => 'xxxxx',
         'ts_salt'     => 'xxxxx',
-        'app'         => 'xxxxx',
     ],
 
     // 腾讯防水墙配置

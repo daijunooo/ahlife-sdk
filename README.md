@@ -14,7 +14,7 @@ $config = require('./config.php');
 $app = Ahlife\App::app($config);
 
 // 授权中心
-$ocenter = $app->ocenter();
+$ocenter = $app->ocenter('we5');
 $config = $ocenter->js(['onMenuShareTimeline', 'onMenuShareAppMessage'], false, true);
 
 // 腾讯滑动验证
