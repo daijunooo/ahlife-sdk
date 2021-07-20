@@ -10,12 +10,12 @@ class Tool implements \Ahlife\Contracts\Tool
         return new static();
     }
 
-    public function cache($key, $value = '', $expire = 0)
+    public function cache($key, $value = null, $expire = null)
     {
-        if ($value) {
-            return cache($key, $value, $expire);
-        } else {
+        if ($value === null) {
             return cache($key);
+        } else {
+            return cache([$key => $value], $expire);
         }
     }
 
