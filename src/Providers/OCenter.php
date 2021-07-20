@@ -122,7 +122,7 @@ class OCenter extends Sdk
     {
         $scope  = $detail ? 'snsapi_userinfo' : 'snsapi_base';
         $key    = $this->session_key . $scope;
-        $openid = $_REQUEST['openid'];
+        $openid = $_REQUEST['openid'] ?? false;
 
         if ($user = $this->tools->session($key)) {
             return $user;

@@ -34,9 +34,9 @@ class TcVerify extends Sdk
         $response = $this->http->get($this->apiurl, [
             "aid"          => $this->appid,
             "AppSecretKey" => $this->secret,
-            "Ticket"       => $_REQUEST['ticket'],
-            "Randstr"      => $_REQUEST['randstr'],
-            "UserIP"       => $_SERVER['SERVER_ADDR']
+            "Ticket"       => $_REQUEST['ticket'] ?? '',
+            "Randstr"      => $_REQUEST['randstr'] ?? '',
+            "UserIP"       => $_SERVER['SERVER_ADDR'] ?? ''
         ]);
 
         $result = json_decode($response['data']);
